@@ -1,0 +1,43 @@
+name: Update README on push to private repo's dev branches
+
+on:
+  repository_dispatch:
+    types: [dispatch-progress-event]
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Git
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone private repo
+        run: |
+          git clone git@github.com:sid410/TrafficEZ.git
+          cp TrafficEZ/README.md README.md
+
+      - name: Add and commit progress updates
+        run: |
+          git add README.md
+          git commit -m "TrafficEZ's progress updates"
+
+      - name: Squash commits and force-push
+        run: |
+          git checkout -B main
+          git pull origin main
+          git reset --soft $(git merge-base HEAD origin/main)
+          git commit --amend -m "TrafficEZ's progress updates"
+          git push origin main --force
